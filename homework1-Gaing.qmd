@@ -1,0 +1,739 @@
+---
+title: "Homerwork 1"
+author: "IGNACIO GAING"
+date: 2023-05-14
+format: 
+  docx: default
+  html:
+    toc: true
+    toc_float: true
+    code-fold: true
+editor: visual
+---
+
+```{r}
+#| label: load-libraries
+#| echo: false # This option disables the printing of code (only output is displayed).
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(nycflights13)
+library(skimr)
+
+```
+
+# Data Manipulation
+
+## Problem 1: Use logical operators to find flights that:
+
+```         
+-   Had an arrival delay of two or more hours (\> 120 minutes)
+-   Flew to Houston (IAH or HOU)
+-   Were operated by United (`UA`), American (`AA`), or Delta (`DL`)
+-   Departed in summer (July, August, and September)
+-   Arrived more than two hours late, but didn't leave late
+-   Were delayed by at least an hour, but made up over 30 minutes in flight
+```
+
+```{r}
+#| label: problem-1
+
+# Had an arrival delay of two or more hours (> 120 minutes)
+flights %>% 
+  filter(arr_delay >= 2)
+
+# Flew to Houston (IAH or HOU)
+flights %>% 
+  filter(dest %in% c("IAH", "HOU") )
+
+
+# Were operated by United (`UA`), American (`AA`), or Delta (`DL`)
+flights %>% 
+  filter(carrier %in% c("UA", "AA", "DL") )
+
+# Departed in summer (July, August, and September)
+flights %>% 
+  filter(month %in% c(7, 8, 9) )
+
+  
+# Arrived more than two hours late, but didn't leave late
+flights %>% 
+  filter(dep_delay <= 0,arr_delay >120)
+
+# Were delayed by at least an hour, but made up over 30 minutes in flight
+flights %>% 
+  filter(dep_delay >= 60,arr_delay <30)
+
+
+```
+
+## Problem 2: What months had the highest and lowest proportion of cancelled flights? Interpret any seasonal patterns. To determine if a flight was cancelled use the following code
+
+<!-- -->
+
+```         
+flights %>% 
+  filter(is.na(dep_time)) 
+```
+
+siome text
+
+```{r}
+#| label: problem-2
+#library(dplyr)
+
+# What months had the highest and lowest % of cancelled flights?
+
+# Calculate the percentage of cancelled flights per month
+cancelled_flights_per_month <- flights %>% 
+  group_by(month) %>%
+  summarise(total_flights = n(), 
+            cancelled_flights = sum (is.na(dep_time))) %>% 
+  mutate(percentage_cancelled = round(cancelled_flights / total_flights * 100,2))
+
+# Display the results
+cancelled_flights_per_month
+
+# Find the month with the maximum and minimum percentage of cancelled flights
+month_with_max_cancelled <- which.max(cancelled_flights_per_month$percentage_cancelled)
+month_with_min_cancelled <- which.min(cancelled_flights_per_month$percentage_cancelled)
+
+# Display the month with the maximum and minimum percentage of cancelled flights
+cat("The month with the maximum percentage of cancelled flights was:", month.name[month_with_max_cancelled], "\n")
+cat("The month with the minimum percentage of cancelled flights was:", month.name[month_with_min_cancelled], "\n")
+
+
+```
+
+## Problem 3: What plane (specified by the `tailnum` variable) traveled the most times from New York City airports in 2013? Please `left_join()` the resulting table with the table `planes` (also included in the `nycflights13` package).
+
+For the plane with the greatest number of flights and that had more than 50 seats, please create a table where it flew to during 2013.
+
+```{r}
+#| label: problem-3
+
+# Load necessary packages
+library(dplyr)
+library(nycflights13)
+
+# Filter flights for New York City airports and the year 2013 and that 
+filtered_flights <- flights %>%
+  filter(substr(year, 1, 4) == "2013" & !is.na(tailnum))
+
+# Count the number of occurrences of each tail number
+tailnum_counts <- filtered_flights %>%
+  count(tailnum)
+
+# Sort the counts in descending order
+sorted_tailnum_counts <- tailnum_counts %>%
+  arrange(desc(n))
+
+# Retrieve the tail number with the highest count
+most_frequent_plane <- sorted_tailnum_counts$tailnum[1]
+
+# Display the results
+most_frequent_plane
+
+# Get the plane with the greatest number of flights and more than 50 seats
+selected_plane <- planes %>%
+  filter(seats > 50 & tailnum == most_frequent_plane)
+
+# Filter flights for the selected plane in 2013
+selected_flights <- filtered_flights %>%
+  filter(tailnum == most_frequent_plane)
+
+# Display the results
+selected_flights
+
+# Count flights by destination
+flight_counts_by_dest <- selected_flights %>%
+  count(dest)
+
+# Output the result
+flight_counts_by_dest
+
+```
+
+## Problem 4: The `nycflights13` package includes a table (`weather`) that describes the weather during 2013. Use that table to answer the following questions:
+
+```         
+-   What is the distribution of temperature (`temp`) in July 2013? Identify any important outliers in terms of the `wind_speed` variable.
+-   What is the relationship between `dewp` and `humid`?
+-   What is the relationship between `precip` and `visib`?
+```
+
+```{r}
+#| label: problem-4A
+
+# Load necessary packages
+library(dplyr)
+library(nycflights13)
+
+    # Filter weather data for July 2013
+weather_july_2013 <- weather %>%
+  filter(month == 7, 
+         year == 2013)
+
+# Summary statistics of temperature
+summary_temp <- summary(weather_july_2013$temp)
+
+# Identify outliers in wind speed
+outliers_wind_speed <- boxplot.stats(weather_july_2013$wind_speed)$out
+
+# Filter weather data for outliers in wind speed
+outliers_weather <- weather_july_2013 %>%
+  filter(wind_speed %in% outliers_wind_speed)
+
+# Output the result
+summary_temp
+outliers_weather
+
+# Result explanation: Amongst the data, we found three standout values that we consider outliers. These outliers indicate instances of unusually high wind speeds that deviate from the typical range. These outliers provide interesting insights into the range of wind conditions that can occur in the area. 
+
+
+#| label: problem-4B
+
+# Load necessary packages
+library(dplyr)
+library(ggplot2)
+library(nycflights13)
+
+# Filter weather data
+filtered_weather <- weather %>%
+  select(dewp, 
+         humid)
+
+# Create scatter plot
+ggplot(filtered_weather, aes(x = dewp, 
+                             y = humid)) +
+  geom_point() +
+  labs(x = "Dew Point Temperature", 
+       y = "Humidity") +
+  ggtitle("Relationship between Dew Point Temperature and Humidity")
+
+# Result explanation: In the scatter plot, each point represents a specific observation. As we examine the plot, we can see that there is a general pattern. When the dew point temperature is low, the corresponding humidity tends to be relatively low as well. Similarly, when the dew point temperature is high, the humidity tends to be higher.
+
+
+#| label: problem-4C
+
+# Load necessary packages
+library(dplyr)
+library(ggplot2)
+library(nycflights13)
+
+# Filter weather data
+filtered_weather <- weather %>%
+  select(precip, visib)
+
+# Create scatter plot
+ggplot(filtered_weather, aes(x = precip, 
+                             y = visib)) +
+  geom_point() +
+  labs(x = "Precipitation", 
+       y = "Visibility") +
+  ggtitle("Relationship between Precipitation and Visibility")
+
+# Result explanation: In the scatter plot, we can observe several points where the visibility (visib) is 0 even when the precipitation (precip) values are lower than 0.25.This phenomenon suggests that there might be other factors impacting visibility besides precipitation alone. For example, fog, mist, or other atmospheric conditions can significantly reduce visibility even with relatively low levels of precipitation.
+
+```
+
+## Problem 5: Use the `flights` and `planes` tables to answer the following questions:
+
+```         
+-   How many planes have a missing date of manufacture?
+-   What are the five most common manufacturers?
+-   Has the distribution of manufacturer changed over time as reflected by the airplanes flying from NYC in 2013? (Hint: you may need to use case_when() to recode the manufacturer name and collapse rare vendors into a category called Other.)
+```
+
+```{r}
+#| label: problem-5A
+
+# Load necessary packages
+library(dplyr)
+library(nycflights13)
+
+# View columns using the names() function
+column_names_1 <- names(planes)
+print(column_names_1)
+
+# Filter planes with missing date of manufacture
+missing_manufacturer <- planes %>%
+  filter(is.na(year))
+
+# Count the number of planes with missing date of manufacture
+count_missing_manufacturer <- nrow(missing_manufacturer)
+
+# Output the result
+count_missing_manufacturer
+
+# View the final result result
+cat("There are", count_missing_manufacturer, "model(s) without a year.")
+
+
+#| label: problem-5B
+
+# Count planes per manufacturer
+planes_per_manufacturer <- planes %>%
+  count(manufacturer) %>%
+  arrange(desc(n)) %>% 
+  top_n(5, n)
+
+# View the result
+print(planes_per_manufacturer)
+
+# Result explanation: Clearly BOING is the main manufacturer followed by AIRBUS
+
+
+#| label: problem-5C
+
+# Merge flights and planes datasets
+merged_data <- flights %>%
+  left_join(planes, by = "tailnum")
+
+# Filter data for flights from NYC in 2013
+filtered_data <- merged_data %>%
+  filter(year.x == 2013)
+
+# Recode manufacturer names and collapse rare vendors into "Other"
+recoded_data <- filtered_data %>%
+  mutate(manufacturer = case_when(
+    manufacturer %in% c("BOEING", "AIRBUS", "EMBRAER") ~ manufacturer,
+    TRUE ~ "Other"
+  ))
+
+# Calculate the distribution of manufacturers by month
+manufacturer_distribution <- recoded_data %>%
+  group_by(month, manufacturer) %>%
+  summarise(count = n(), .groups = "drop_last") %>%
+  arrange(month, desc(count))
+
+# Calculate cumulative percentages by month
+manufacturer_distribution <- manufacturer_distribution %>%
+  group_by(month) %>%
+  mutate(cumulative_percentage = cumsum(count) / sum(count) * 100)
+
+# Create cumulative line chart
+ggplot(manufacturer_distribution, aes(x = month, y = cumulative_percentage, group = manufacturer, color = manufacturer)) +
+  geom_line() +
+  geom_area(aes(fill = manufacturer), position = "identity", alpha = 0.5) +
+  labs(x = "Month", y = "Cumulative Percentage", fill = "Manufacturer", color = "Manufacturer") +
+  ggtitle("Cumulative Distribution (Percentage) of Manufacturers by Month in 2013") +
+  scale_y_continuous(labels = scales::percent) +
+  theme(legend.position = "bottom") +
+  scale_x_continuous(breaks = 1:12, labels = month.abb)
+
+# Result explanation: Upon analyzing the chart, it appears that the distribution of manufacturers for airplanes flying from NYC in 2013 remained relatively stable over time, with minimal changes in market share among different manufacturers.
+
+```
+
+## Problem 6: Use the `flights` and `planes` tables to answer the following questions:
+
+```         
+-   What is the oldest plane (specified by the tailnum variable) that flew from New York City airports in 2013?
+-   How many airplanes that flew from New York City are included in the planes table?
+```
+
+```{r}
+#| label: problem-6A
+
+# Filter flights from NYC airports in 2013
+nyc_flights_2013 <- flights %>%
+  filter(year == 2013)
+
+# Join with planes table to get the aircraft details
+flights_with_planes <- left_join(nyc_flights_2013, 
+                                 planes %>% 
+                                   rename(year_plane = year), 
+                                 by = "tailnum")
+
+# Find the oldest plane
+oldest_plane <- flights_with_planes %>%
+  filter(!is.na(year_plane)) %>%
+  arrange(year_plane) %>%
+  select(tailnum, year_plane) %>%
+  slice(1)
+
+# Display the result
+oldest_plane
+
+#| label: problem-6B
+
+# Filter flights from NYC airports in 2013
+nyc_flights_2013 <- flights %>%
+  filter(year == 2013)
+
+# Join with planes table to get the aircraft details
+flights_with_planes <- left_join(nyc_flights_2013, 
+                                 planes %>% 
+                                   rename(year_plane = year), 
+                                 by = "tailnum")
+
+# Get unique tail numbers from flights
+unique_tailnums <- unique(flights_with_planes$tailnum)
+
+# Filter planes for the unique tail numbers
+planes_from_nyc <- planes %>%
+  filter(tailnum %in% unique_tailnums)
+
+# Count the number of airplanes
+num_airplanes <- nrow(planes_from_nyc)
+
+# Display the result
+num_airplanes
+
+# Display the result
+cat("The number of airplanes that flew from New York City and are included in the planes table is", num_airplanes)
+
+```
+
+## Problem 7: Use the `nycflights13` to answer the following questions:
+
+```         
+-   What is the median arrival delay on a month-by-month basis in each airport?
+-   For each airline, plot the median arrival delay for each month and origin airport.
+```
+
+```{r}
+#| label: problem-7A
+
+# Calculate median arrival delay on a month-by-month basis for each airport
+median_arrival_delay <- flights %>%
+  group_by(month, dest) %>%
+  summarise(median_delay = median(arr_delay, na.rm = TRUE), .groups = "drop")
+
+# Calculate total median arrival delay per month
+total_median_delay <- median_arrival_delay %>%
+  group_by(month) %>%
+  summarise(total_median_delay = sum(median_delay, na.rm = TRUE))
+
+# Pivot the table to have airports as columns
+median_arrival_delay_pivot <- pivot_wider(median_arrival_delay, names_from = dest, values_from = median_delay)
+
+# Add the total median delay column as the first column
+median_arrival_delay_pivot <- median_arrival_delay_pivot %>%
+  left_join(total_median_delay, by = "month") %>%
+  select(month, Total = total_median_delay, everything())
+
+# Display the result
+median_arrival_delay_pivot
+
+#| label: problem-7B
+
+# Get the distinct origins from the flights table
+distinct_origins <- distinct(flights, origin)
+
+# Display the results
+print(distinct_origins)
+
+# Calculate median arrival delay for each airline, month, and origin airport
+median_arrival_delay <- flights %>%
+  group_by(carrier, month, origin) %>%
+  summarise(median_delay = median(arr_delay, na.rm = TRUE), .groups = "drop")
+
+# Plot median arrival delay for each airline
+ggplot(median_arrival_delay, aes(x = month, y = median_delay, color = origin, group = interaction(carrier, origin))) +
+  geom_line() +
+  facet_wrap(vars(carrier), scales = "free_y") +
+  labs(x = "Month", y = "Median Arrival Delay", color = "Origin", title = "Median Arrival Delay by Airline, Month, and Origin Airport") +
+  theme_minimal()
+
+
+```
+
+## Problem 8: Let's take a closer look at what carriers service the route to San Francisco International (SFO). Join the `flights` and `airlines` tables and count which airlines flew the most to SFO. Produce a new dataframe, `fly_into_sfo` that contains three variables: the `name` of the airline, e.g., `United Air Lines Inc.` not `UA`, the count (number) of times it flew to SFO, and the `percent` of the trips that that particular airline flew to SFO.
+
+```{r}
+
+# Join flights and airlines tables
+fly_into_sfo <- flights %>%
+  filter(dest == "SFO") %>%
+  group_by(carrier) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  inner_join(airlines, by = c("carrier" = "carrier"))
+
+# Calculate percent of trips for each airline
+total_trips <- sum(fly_into_sfo$count)
+fly_into_sfo <- fly_into_sfo %>%
+  mutate(percent_trips = (count / total_trips) * 100)
+
+# Round the percentage values to two decimal places
+fly_into_sfo$percent_trips <- round(fly_into_sfo$percent_trips, 2)
+
+# Reorder the columns
+fly_into_sfo <- fly_into_sfo %>%
+  select(carrier, name, flights_SFO = count, percent_trips)
+
+# Sort by carrier in ascending order
+fly_into_sfo <- fly_into_sfo %>%
+  arrange(carrier)
+
+# Display the resulting dataframe
+fly_into_sfo
+
+
+```
+
+And here is some bonus ggplot code to plot your dataframe
+
+```{r}
+#| label: ggplot-flights-toSFO
+#| message: false
+#| warning: false
+
+
+fly_into_sfo %>% 
+  
+  # sort 'name' of airline by the numbers it times to flew to SFO
+  mutate(name = fct_reorder(name, count)) %>% 
+  
+  ggplot() +
+  
+  aes(x = count, 
+      y = name) +
+  
+  # a simple bar/column plot
+  geom_col() +
+  
+  # add labels, so each bar shows the % of total flights 
+  geom_text(aes(label = percent),
+             hjust = 1, 
+             colour = "white", 
+             size = 5)+
+  
+  # add labels to help our audience  
+  labs(title="Which airline dominates the NYC to SFO route?", 
+       subtitle = "as % of total flights in 2013",
+       x= "Number of flights",
+       y= NULL) +
+  
+  theme_minimal() + 
+  
+  # change the theme-- i just googled those , but you can use the ggThemeAssist add-in
+  # https://cran.r-project.org/web/packages/ggThemeAssist/index.html
+  
+  theme(#
+    # so title is left-aligned
+    plot.title.position = "plot",
+    
+    # text in axes appears larger        
+    axis.text = element_text(size=12),
+    
+    # title text is bigger
+    plot.title = element_text(size=18)
+      ) +
+
+  # add one final layer of NULL, so if you comment out any lines
+  # you never end up with a hanging `+` that awaits another ggplot layer
+  NULL
+ 
+ 
+```
+
+## Problem 9: Let's take a look at cancellations of flights to SFO. We create a new dataframe `cancellations` as follows
+
+```{r}
+
+cancellations <- flights %>% 
+  
+  # just filter for destination == 'SFO'
+  filter(dest == 'SFO') %>% 
+  
+  # a cancelled flight is one with no `dep_time` 
+  filter(is.na(dep_time))
+
+```
+
+I want you to think how we would organise our data manipulation to create the following plot. No need to write the code, just explain in words how you would go about it.
+
+![](images/sfo-cancellations.png)
+
+#To create a plot displaying cancellations of flights to SFO by month, carrier, and airport origin, we group the filtered dataset by month, carrier, and airport origin. Then, we calculate the count of cancelled flights for each combination of these variables. After arranging the dataset by month in ascending order, we proceed to plot the data using a suitable visualization method.
+
+## Problem 10: On your own -- Hollywood Age Gap
+
+The website https://hollywoodagegap.com is a record of *THE AGE DIFFERENCE IN YEARS BETWEEN MOVIE LOVE INTERESTS*. This is an informational site showing the age gap between movie love interests and the data follows certain rules:
+
+-   The two (or more) actors play actual love interests (not just friends, coworkers, or some other non-romantic type of relationship)
+-   The youngest of the two actors is at least 17 years old
+-   No animated characters
+
+The age gaps dataset includes "gender" columns, which always contain the values "man" or "woman". These values appear to indicate how the characters in each film identify and some of these values do not match how the actor identifies. We apologize if any characters are misgendered in the data!
+
+The following is a data dictionary of the variables used
+
+| variable            | class     | description                                                                                             |
+|:--------------------|:----------|:--------------------------------------------------------------------------------------------------------|
+| movie_name          | character | Name of the film                                                                                        |
+| release_year        | integer   | Release year                                                                                            |
+| director            | character | Director of the film                                                                                    |
+| age_difference      | integer   | Age difference between the characters in whole years                                                    |
+| couple_number       | integer   | An identifier for the couple in case multiple couples are listed for this film                          |
+| actor_1\_name       | character | The name of the older actor in this couple                                                              |
+| actor_2\_name       | character | The name of the younger actor in this couple                                                            |
+| character_1\_gender | character | The gender of the older character, as identified by the person who submitted the data for this couple   |
+| character_2\_gender | character | The gender of the younger character, as identified by the person who submitted the data for this couple |
+| actor_1\_birthdate  | date      | The birthdate of the older member of the couple                                                         |
+| actor_2\_birthdate  | date      | The birthdate of the younger member of the couple                                                       |
+| actor_1\_age        | integer   | The age of the older actor when the film was released                                                   |
+| actor_2\_age        | integer   | The age of the younger actor when the film was released                                                 |
+
+```{r}
+
+#| label: problem-10A
+ 
+age_gap <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-02-14/age_gaps.csv')
+
+# Create a dataframe with age_difference column
+age_gap_df <- data.frame(age_difference = age_gap_data)
+
+# Remove any missing values in the age_difference column
+age_gap_df <- age_gap_df %>% filter(!is.na(age_difference))
+
+age_gap_data
+
+# Plot the distribution of age differences
+ggplot(data = age_gap_df, aes(x = age_difference)) +
+  geom_histogram(binwidth = 5, fill = "skyblue", color = "black") +
+  labs(x = "Age Difference", y = "Frequency") +
+  ggtitle("Distribution of Age Differences in Movies")
+
+# Calculate the typical age difference (median)
+typical_age_difference <- median(age_gap_df$age_difference)
+typical_age_difference
+
+# Print the typical age difference in movies
+cat("The typical age difference in movies is approximately", typical_age_difference, "years.\n")
+
+#| label: problem-10B
+
+# Calculate the lower and upper age bounds based on the "half plus seven" rule
+age_gap_data <- age_gap %>%
+  mutate(lower_bound = floor(actor_1_age/2) + 7,
+         upper_bound = (actor_1_age - 7) * 2)
+
+# Count the number of actor/actress pairs that satisfy the "half plus seven" rule
+rule_applies <- age_gap_data %>%
+  filter(actor_2_age >= lower_bound, actor_2_age <= upper_bound) %>%
+  tally()
+
+# Calculate the percentage of pairs that satisfy the rule
+percentage_rule_applies <- rule_applies$n / nrow(age_gap_data) * 100
+
+# Print the result
+cat("The 'half plus seven' rule applies in approximately", percentage_rule_applies, "% of the actor/actress pairs in the dataset.\n")
+
+
+#| label: problem-10C
+
+# Count the number of love interests per movie
+movie_love_interests <- age_gap %>%
+  group_by(movie_name) %>%
+  summarise(num_love_interests = n_distinct(couple_number)) %>%
+  arrange(desc(num_love_interests))
+
+# Get the movie with the greatest number of love interests
+greatest_love_interests_movie <- movie_love_interests$movie_name[1]
+
+# Print the result
+cat("The movie with the greatest number of love interests is:", greatest_love_interests_movie, "\n")
+
+
+#| label: problem-10D
+
+# Count the number of love interests per actor/actress
+actor_love_interests <- age_gap %>%
+  group_by(actor_1_name) %>%
+  summarise(num_love_interests = n_distinct(couple_number)) %>%
+  arrange(desc(num_love_interests))
+
+# Get the actor/actress with the greatest number of love interests
+greatest_love_interests_actor <- actor_love_interests$actor_1_name[1]
+
+# Print the result
+cat("The actor/actress with the greatest number of love interests is:", greatest_love_interests_actor, "\n")
+
+#| label: problem-10E
+
+# Convert release_year to numeric format
+age_gap$release_year <- as.numeric(age_gap$release_year)
+
+# Filter data for the years 1935 to 2022
+filtered_data <- age_gap %>% filter(release_year >= 1935 & release_year <= 2022)
+
+# Calculate the mean and median age difference for each year
+age_diff_by_year <- filtered_data %>%
+  group_by(release_year) %>%
+  summarise(mean_age_diff = mean(age_difference),
+            median_age_diff = median(age_difference))
+
+# Plot the trend of mean and median age difference over the years
+plot <- ggplot(age_diff_by_year, aes(x = release_year)) +
+  geom_line(aes(y = mean_age_diff, color = "Mean")) +
+  geom_line(aes(y = median_age_diff, color = "Median")) +
+  labs(x = "Year", y = "Age Difference", color = "Metric") +
+  ggtitle("Mean and Median Age Difference Over the Years") +
+  scale_color_manual(values = c("Mean" = "blue", "Median" = "red"))
+
+plot  # Display the plot
+
+
+comment_text <- "In general, it can be observed that the mean and median age difference did not remain constant over the years. There are a couple of key trends that can be observed from the plot:
+
+1) Historically, there tended to be a larger age difference between movie love interests compared to more recent years. This suggests that in earlier times, movies portrayed relationships with larger age gaps between the characters.
+
+2) However, it is important to note that there is no clear downward pattern over time. In fact, in recent years, there appears to be an increase in the mean and median age difference, indicating that movies have depicted relationships with larger age disparities again.
+
+These observations suggest that while there was a general decrease in age differences between movie love interests in the past, there is no consistent downward trend. The age difference in movies seems to have varied over time, with recent years showing an upward trend in the mean and median age difference"
+
+cat(comment(comment_text))
+
+#| label: problem-10F
+
+# Filter the data for same-gender love interests
+same_gender_love_interests <- age_gap %>%
+  filter(character_1_gender == character_2_gender)
+
+# Calculate the frequency of same-gender love interests
+frequency_same_gender <- nrow(same_gender_love_interests) / nrow(age_gap) * 100
+
+# Print the result
+cat("Hollywood depicts same-gender love interests in approximately", frequency_same_gender, "% of the relationships.\n")
+
+
+```
+
+How would you explore this data set? Here are some ideas of tables/ graphs to help you with your analysis
+
+-   How is `age_difference` distributed? What's the 'typical' `age_difference` in movies?
+
+-   The `half plus seven\` rule. Large age disparities in relationships carry certain stigmas. One popular rule of thumb is the [half-your-age-plus-seven](https://en.wikipedia.org/wiki/Age_disparity_in_sexual_relationships#The_.22half-your-age-plus-seven.22_rule) rule. This rule states you should never date anyone under half your age plus seven, establishing a minimum boundary on whom one can date. In order for a dating relationship to be acceptable under this rule, your partner's age must be:
+
+$$\frac{\text{Your age}}{2} + 7 < \text{Partner Age} < (\text{Your age} - 7) * 2$$ How frequently does this rule apply in this dataset?
+
+-   Which movie has the greatest number of love interests?
+-   Which actors/ actresses have the greatest number of love interests in this dataset?
+-   Is the mean/median age difference staying constant over the years (1935 - 2022)?
+-   How frequently does Hollywood depict same-gender love interests?
+
+# Deliverables
+
+There is a lot of explanatory text, comments, etc. You do not need these, so delete them and produce a stand-alone document that you could share with someone. Render the edited and completed Quarto Markdown (qmd) file as a Word document (use the "Render" button at the top of the script editor window) and upload it to Canvas. You must be commiting and pushing tour changes to your own Github repo as you go along.
+
+# Details
+
+-   Who did you collaborate with: TYPE NAMES HERE
+-   Approximately how much time did you spend on this problem set: ANSWER HERE
+-   What, if anything, gave you the most trouble: ANSWER HERE
+
+**Please seek out help when you need it,** and remember the [15-minute rule](https://mam2022.netlify.app/syllabus/#the-15-minute-rule){target="_blank"}. You know enough R (and have enough examples of code from class and your readings) to be able to do this. If you get stuck, ask for help from others, post a question on Slack-- and remember that I am here to help too!
+
+> As a true test to yourself, do you understand the code you submitted and are you able to explain it to someone else?
+
+# Rubric
+
+13/13: Problem set is 100% completed. Every question was attempted and answered, and most answers are correct. Code is well-documented (both self-documented and with additional comments as necessary). Used tidyverse, instead of base R. Graphs and tables are properly labelled. Analysis is clear and easy to follow, either because graphs are labeled clearly or you've written additional text to describe how you interpret the output. Multiple Github commits. Work is exceptional. I will not assign these often.
+
+8/13: Problem set is 60--80% complete and most answers are correct. This is the expected level of performance. Solid effort. Hits all the elements. No clear mistakes. Easy to follow (both the code and the output). A few Github commits.
+
+5/13: Problem set is less than 60% complete and/or most answers are incorrect. This indicates that you need to improve next time. I will hopefully not assign these often. Displays minimal effort. Doesn't complete all components. Code is poorly written and not documented. Uses the same type of plot for each graph, or doesn't use plots appropriate for the variables being analyzed. No Github commits.
