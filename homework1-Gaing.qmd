@@ -37,7 +37,7 @@ library(skimr)
 ```
 
 ```{r}
-#| label: problem-1
+#| label: problem-1 dsdasdasd
 
 # Had an arrival delay of two or more hours (> 120 minutes)
 flights %>% 
@@ -563,7 +563,7 @@ The age gaps dataset includes "gender" columns, which always contain the values 
 The following is a data dictionary of the variables used
 
 | variable            | class     | description                                                                                             |
-|:--------------------|:----------|:--------------------------------------------------------------------------------------------------------|
+|:-----------|:-----------|:-----------------------------------------------|
 | movie_name          | character | Name of the film                                                                                        |
 | release_year        | integer   | Release year                                                                                            |
 | director            | character | Director of the film                                                                                    |
