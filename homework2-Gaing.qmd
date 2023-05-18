@@ -67,6 +67,13 @@ glimpse(mass_shootings)
 -   Generate a data frame that summarizes the number of mass shootings per year.
 
 ```{r}
+# Group the data by year and count the number of shootings
+shootings_per_year <- mass_shootings %>%
+  group_by(year) %>%
+  summarise(Shootings = n())
+
+# View the resulting data frame
+print(shootings_per_year)
 
 ```
 
@@ -74,18 +81,81 @@ glimpse(mass_shootings)
 
 ```{r}
 
+library(ggplot2)
+
+# Create a custom color palette
+my_colors <- c("White" = "#FF9999", "Black" = "#666666", "Asian" = "#FFCC99", "Other" = "#3399FF")
+
+# Reorder the data frame by the number of shooters in descending order and eliminate the NA
+mass_shootings %>% 
+  count(race, sort=TRUE) %>% 
+  drop_na(race) %>% 
+  mutate(race = fct_reorder(race, n)) %>% 
+  
+  
+# Create the bar chart with ordered bars and custom colors
+  ggplot( aes(x = race, y = n, fill = race)) +
+  geom_col()+
+  scale_fill_manual(values = my_colors) +
+  labs(x = "Race", y = "Number of Shooters") +
+  ggtitle("Number of Mass Shooters by Race") +
+  theme_minimal()+
+  theme(legend.position = "none")
+
+# Create the bar chart with ordered bars and custom colors in the other way from max to min
+ggplot(mass_shootings %>% 
+         count(race, sort = TRUE) %>% 
+         drop_na(race) %>% 
+         mutate(race = fct_reorder(race, n)),
+       aes(x = reorder(race, -n), y = n, fill = race)) +
+  geom_col() +
+  scale_fill_manual(values = my_colors) +
+  labs(x = "Race", y = "Number of Shooters") +
+  ggtitle("Number of Mass Shooters by Race") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
 ```
 
 -   Generate a boxplot visualizing the number of total victims, by type of location.
 
 ```{r}
+library(ggplot2)
+
+# Create the boxplot
+ggplot(mass_shootings, aes(x = location_type, y = total_victims)) +
+  geom_boxplot(fill = "steelblue", color = "black") +
+  labs(x = "Location", y = "Total Victims") +
+  ggtitle("Number of Total Victims by Location Type") +
+  theme_minimal()
+
+# Preprocess the data to remove the outlier in the "Others" location type to make a better chart 
+processed_data <- mass_shootings
+processed_data$total_victims[processed_data$location_type == "Other" & processed_data$total_victims == 604] <- NA
+
+# Create the boxplot with outliers, excluding the outlier in the "Others" location type
+ggplot(processed_data, aes(x = location_type, y = total_victims)) +
+  geom_boxplot(fill = "steelblue", color = "black", outlier.colour = "red", outlier.shape = 16) +
+  labs(x = "Location", y = "Total Victims") +
+  ggtitle("Number of Total Victims by Location Type") +
+  theme_minimal()
+
 
 ```
 
 -   Redraw the same plot, but remove the Las Vegas Strip massacre from the dataset.
 
 ```{r}
+# Filter out the Las Vegas Strip massacre
+filtered_data <- mass_shootings %>% 
+  filter(!(case == "Las Vegas Strip massacre"))
 
+# Create the boxplot without the Las Vegas Strip massacre
+ggplot(filtered_data, aes(x = location_type, y = total_victims)) +
+  geom_boxplot(fill = "steelblue", color = "black", outlier.colour = "red", outlier.shape = 16) +
+  labs(x = "Location", y = "Total Victims") +
+  ggtitle("Number of Total Victims by Location Type (Excluding Las Vegas Strip massacre)") +
+  theme_minimal()
 ```
 
 ### More open-ended questions
@@ -95,6 +165,16 @@ Address the following questions. Generate appropriate figures/tables to support 
 -   How many white males with prior signs of mental illness initiated a mass shooting after 2000?
 
 ```{r}
+# Filter the dataset based on the specified criteria
+filtered_data <- mass_shootings %>%
+  filter(race == "White", male == "TRUE", `prior_mental_illness` == "Yes", year > 2000)
+
+# Count the number of filtered cases
+num_cases <- nrow(filtered_data)
+
+# Display the result as text
+cat("The number of white males with prior signs of mental illness who initiated a mass shooting after 2000 is:", num_cases)
+
 
 ```
 
@@ -102,12 +182,107 @@ Address the following questions. Generate appropriate figures/tables to support 
 
 ```{r}
 
+# Define the order of the months
+month_order <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+# Calculate the count of mass shootings for each month
+shootings_by_month <- mass_shootings %>%
+  count(month) %>%
+  arrange(match(month, month_order))
+
+# Convert the month column to a factor with the desired order
+shootings_by_month$month <- factor(shootings_by_month$month, levels = month_order)
+
+# Determine the month with the maximum number of mass shootings
+max_month <- shootings_by_month$month[which.max(shootings_by_month$n)]
+max_count <- max(shootings_by_month$n)
+
+# Create the bar chart
+ggplot(shootings_by_month, aes(x = month, y = n)) +
+  geom_bar(stat = "identity", fill = ifelse(shootings_by_month$month == max_month, "red", "steelblue"), color = "black") +
+  labs(x = "Month", y = "Number of Mass Shootings") +
+  ggtitle("Number of Mass Shootings by Month") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
 ```
 
 -   How does the distribution of mass shooting fatalities differ between White and Black shooters? What about White and Latino shooters?
 
 ```{r}
 
+# Filter the data for relevant groups (White and Black shooters)
+filtered_data <- mass_shootings %>%
+  filter(race %in% c("White", "Black"))
+
+# Create a boxplot to compare the distribution of fatalities between White and Black shooters
+ggplot(filtered_data, aes(x = race, y = fatalities, fill = race)) +
+  geom_boxplot() +
+  labs(x = "Shooter Race", y = "Number of Fatalities") +
+  ggtitle("Distribution of Mass Shooting Fatalities\n(White vs. Black Shooters)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+
+# Filter the data for relevant groups (White and Latino shooters)
+filtered_data <- mass_shootings %>%
+  filter(race %in% c("White", "Latino"))
+
+# Create a boxplot to compare the distribution of fatalities between White and Latino shooters
+ggplot(filtered_data, aes(x = race, y = fatalities, fill = race)) +
+  geom_boxplot() +
+  labs(x = "Shooter Race", y = "Number of Fatalities") +
+  ggtitle("Distribution of Mass Shooting Fatalities\n(White vs. Latino Shooters)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# Calculate summary statistics
+summary_white <- summary(mass_shootings$fatalities[mass_shootings$race == "White"])
+summary_black <- summary(mass_shootings$fatalities[mass_shootings$race == "Black"])
+summary_latino <- summary(mass_shootings$fatalities[mass_shootings$race == "Latino"])
+
+# Conduct statistical tests
+ttest_white_black <- t.test(mass_shootings$fatalities[mass_shootings$race == "White"],
+                            mass_shootings$fatalities[mass_shootings$race == "Black"])
+ttest_white_latino <- t.test(mass_shootings$fatalities[mass_shootings$race == "White"],
+                             mass_shootings$fatalities[mass_shootings$race == "Latino"])
+
+# Calculate effect sizes
+effect_size_white_black <- abs(ttest_white_black$estimate / sqrt(ttest_white_black$parameter))
+effect_size_white_latino <- abs(ttest_white_latino$estimate / sqrt(ttest_white_latino$parameter))
+
+# Print the results
+cat("Summary Statistics for White Shooters:\n")
+print(summary_white)
+
+cat("\nSummary Statistics for Black Shooters:\n")
+print(summary_black)
+
+cat("\nSummary Statistics for Latino Shooters:\n")
+print(summary_latino)
+
+cat("\nT-Test Results (White vs. Black Shooters):\n")
+print(ttest_white_black)
+
+cat("\nT-Test Results (White vs. Latino Shooters):\n")
+print(ttest_white_latino)
+
+cat("\nEffect Size (White vs. Black Shooters):\n")
+print(effect_size_white_black)
+
+cat("\nEffect Size (White vs. Latino Shooters):\n")
+print(effect_size_white_latino)
+
+
+Answer <-"Answer: The distribution of mass shooting fatalities differs between White and Black shooters. The summary statistics show that White shooters have a slightly higher mean (8.776) compared to Black shooters (5.571), indicating a potential difference in the average number of fatalities. The Welch's t-test between White and Black shooters reveals a statistically significant difference in means (t = 2.7413, p = 0.007457), suggesting that the distributions are likely different. The effect size (Cohen's d) for this comparison is 0.9516, indicating a moderate effect.
+
+Regarding the distribution of mass shooting fatalities between White and Latino shooters, the summary statistics show that White shooters have a higher mean (8.776) compared to Latino shooters (4.4). The Welch's t-test between White and Latino shooters reveals a statistically significant difference in means (t = 4.0458, p = 0.0001266), suggesting distinct distributions. The effect size (Cohen's d) for this comparison is 1.0195, indicating a substantial effect.
+
+In summary, based on the available information, there are differences in the distribution of mass shooting fatalities between White and Black shooters as well as White and Latino shooters. White shooters tend to have higher average fatalities compared to both Black and Latino shooters, and statistical tests confirm these differences as statistically significant. Effect sizes indicate the practical significance of the observed differences, with moderate to substantial effects in both comparisons."
+
+# Print the answer
+cat("\n", Answer)
 ```
 
 ### Very open-ended
@@ -115,13 +290,61 @@ Address the following questions. Generate appropriate figures/tables to support 
 -   Are mass shootings with shooters suffering from mental illness different from mass shootings with no signs of mental illness in the shooter?
 
 ```{r}
+# Subset data for mass shootings with mental illness and without signs of mental illness
+mental_illness <- mass_shootings$fatalities[mass_shootings$prior_mental_illness == "Yes"]
+no_mental_illness <- mass_shootings$fatalities[mass_shootings$prior_mental_illness == "No"]
 
+# Perform t-test
+ttest_mental_illness <- t.test(mental_illness, no_mental_illness)
+
+# Create a string representation of the t-test results
+ttest_results <- paste("T-test results:\n",
+                       "Statistic:", ttest_mental_illness$statistic, "\n",
+                       "Degrees of Freedom:", ttest_mental_illness$parameter, "\n",
+                       "P-value:", ttest_mental_illness$p.value, "\n")
+
+# Print the t-test results
+cat(ttest_results)
+
+# Check if there is a significant difference
+if (ttest_mental_illness$p.value < 0.05) {
+  cat("There is a significant difference in the number of fatalities between mass shootings with mental illness and those without signs of mental illness.\n")
+} else {
+  cat("There is no significant difference in the number of fatalities between mass shootings with mental illness and those without signs of mental illness.\n")
+}
 ```
 
 -   Assess the relationship between mental illness and total victims, mental illness and location type, and the intersection of all three variables.
 
 ```{r}
+# Relationship between mental illness and total victims
+ttest_mental_illness_victims <- t.test(mass_shootings$total_victims[mass_shootings$prior_mental_illness == "Yes"],
+                                      mass_shootings$total_victims[mass_shootings$prior_mental_illness == "No"])
 
+# Relationship between mental illness and location type
+test_mental_illness_location <- chisq.test(table(mass_shootings$prior_mental_illness, mass_shootings$location_type))
+
+# Intersection of mental illness, location type, and total victims
+subset_mental_illness_location <- mass_shootings[mass_shootings$prior_mental_illness == "Yes" & mass_shootings$location_type == "Specific Location", ]
+summary_victims_mental_illness_location <- summary(subset_mental_illness_location$total_victims)
+
+# Print the results
+cat("Relationship between mental illness and total victims:\n")
+print(ttest_mental_illness_victims)
+cat("\n")
+
+cat("Relationship between mental illness and location type:\n")
+cat("Contingency table:\n")
+print(table(mass_shootings$prior_mental_illness, mass_shootings$location_type))
+cat("\n")
+
+cat("Chi-square test results:\n")
+print(test_mental_illness_location)
+cat("\n")
+
+cat("Intersection of mental illness, location type, and total victims:\n")
+cat("Summary statistics of total victims:\n")
+print(summary_victims_mental_illness_location)
 ```
 
 Make sure to provide a couple of sentences of written interpretation of your tables/figures. Graphs and tables alone will not be sufficient to answer this question.
@@ -170,24 +393,133 @@ The data dictionary is as follows
 -   In this dataset, how likely are fraudulent transactions? Generate a table that summarizes the number and frequency of fraudulent transactions per year.
 
 ```{r}
+# Group the data by year and calculate the count and frequency of fraudulent transactions
+fraud_summary <- card_fraud %>%
+  group_by(trans_year) %>%
+  summarise(fraud_count = sum(is_fraud),
+            fraud_frequency = mean(is_fraud))
+
+# Print the fraud summary table
+print(fraud_summary)
 
 ```
 
 -   How much money (in US\$ terms) are fraudulent transactions costing the company? Generate a table that summarizes the total amount of legitimate and fraudulent transactions per year and calculate the % of fraudulent transactions, in US\$ terms.
 
 ```{r}
+# Group the data by year and calculate the total amount of legitimate and fraudulent transactions
+transaction_summary <- card_fraud %>%
+  group_by(trans_year) %>%
+  summarise(total_legitimate_amount = sum(amt[is_fraud == 0]),
+            total_fraudulent_amount = sum(amt[is_fraud == 1]))
+
+# Calculate the percentage of fraudulent transactions in US dollar terms
+transaction_summary <- transaction_summary %>%
+  mutate(fraud_percentage = (total_fraudulent_amount / (total_legitimate_amount + total_fraudulent_amount)) * 100)
+
+# Print the transaction summary table
+print(transaction_summary)
 
 ```
 
 -   Generate a histogram that shows the distribution of amounts charged to credit card, both for legitimate and fraudulent accounts. Also, for both types of transactions, calculate some quick summary statistics.
 
 ```{r}
+library(dplyr)
+library(ggplot2)
+
+# Create separate data frames for legitimate and fraudulent transactions
+legitimate_transactions <- card_fraud %>% filter(is_fraud == 0)
+fraudulent_transactions <- card_fraud %>% filter(is_fraud == 1)
+
+
+# Remove outliers from legitimate transactions
+legitimate_transactions <- legitimate_transactions %>%
+  filter(amt <= quantile(amt, 0.99))  # Adjust the quantile value as desired
+
+# Remove outliers from fraudulent transactions
+fraudulent_transactions <- fraudulent_transactions %>%
+  filter(amt <= quantile(amt, 0.99))  # Adjust the quantile value as desired
+
+# Generate histogram for legitimate transactions with "smooth (calm)" color
+ggplot(legitimate_transactions, aes(x = amt)) +
+  geom_histogram(fill = "#87CEEB", color = "black", bins = 30) +
+  labs(title = "Distribution of Amounts Charged (Legitimate Transactions)",
+       x = "Amount Charged", y = "Frequency") +
+  theme_minimal()
+
+# Calculate summary statistics for legitimate transactions
+legitimate_summary <- summary(legitimate_transactions$amt)
+cat("Summary Statistics for Legitimate Transactions:\n")
+cat("Min.     :", legitimate_summary[1], "\n")
+cat("1st Qu.  :", legitimate_summary[2], "\n")
+cat("Median   :", legitimate_summary[3], "\n")
+cat("Mean     :", legitimate_summary[4], "\n")
+cat("3rd Qu.  :", legitimate_summary[5], "\n")
+cat("Max.     :", legitimate_summary[6], "\n")
+cat("NA's     :", legitimate_summary[7], "\n\n")
+
+# Generate histogram for fraudulent transactions with "alarm" color
+ggplot(fraudulent_transactions, aes(x = amt)) +
+  geom_histogram(fill = "#FF4500", color = "black", bins = 30) +
+  labs(title = "Distribution of Amounts Charged (Fraudulent Transactions)",
+       x = "Amount Charged", y = "Frequency") +
+  theme_minimal()
+
+# Calculate summary statistics for fraudulent transactions
+fraudulent_summary <- summary(fraudulent_transactions$amt)
+cat("Summary Statistics for Fraudulent Transactions:\n")
+cat("Min.     :", fraudulent_summary[1], "\n")
+cat("1st Qu.  :", fraudulent_summary[2], "\n")
+cat("Median   :", fraudulent_summary[3], "\n")
+cat("Mean     :", fraudulent_summary[4], "\n")
+cat("3rd Qu.  :", fraudulent_summary[5], "\n")
+cat("Max.     :", fraudulent_summary[6], "\n")
+cat("NA's     :", fraudulent_summary[7], "\n")
+
+Answer <- "The summary statistics reveal that fraudulent transactions tend to involve larger amounts compared to legitimate transactions. This poses a significant problem as higher transaction amounts in fraudulent activities can lead to substantial financial losses for the company. Detecting and preventing fraud is crucial to mitigate these risks, safeguard the company's financial health, and maintain customer trust."
+cat(Answer)
 
 ```
 
 -   What types of purchases are most likely to be instances of fraud? Consider category of merchants and produce a bar chart that shows % of total fraudulent transactions sorted in order.
 
 ```{r}
+# Calculate the count and percentage of fraudulent transactions per category
+fraud_percentage_df <- card_fraud %>%
+  group_by(category) %>%
+  summarise(total_fraudulent_transactions = sum(is_fraud),
+            total_transactions = n(),
+            percentage = round((total_fraudulent_transactions / total_transactions) * 100, 1))
+
+# Calculate the average percentage of fraudulent transactions
+avg_percentage <- mean(fraud_percentage_df$percentage)
+
+# Add a column indicating if the category is above or below average
+fraud_percentage_df <- fraud_percentage_df %>%
+  mutate(above_average = ifelse(percentage > avg_percentage, "Above Average", "Below Average"))
+
+# Create the bar chart with percentages, average line, and average label
+ggplot(fraud_percentage_df, aes(x = reorder(category, -percentage), y = percentage, fill = above_average)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = ifelse(percentage > avg_percentage, paste0(round(percentage, 1), "%"), "")), vjust = -0.5, size = 3) +
+  geom_hline(yintercept = avg_percentage, linetype = "dashed", color = "red") +
+  geom_text(aes(label = paste0(round(avg_percentage, 1), "%")), x = Inf, y = avg_percentage, vjust = -0.5, color = "red", hjust = 1, size = 4) +
+  labs(x = "Merchant Category", y = "Percentage of Fraudulent Transactions") +
+  ggtitle(" High fraud rates in specific merchant categories warrant investigation") +
+  labs(subtitle = "Percentage of Fraudulent Transactions by Merchant Category") +
+  scale_fill_manual(values = c("Below Average" = "steelblue", "Above Average" = "orange")) +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y.right = element_text(color = "red", size = 6),
+        plot.title = element_text(size = 12, hjust = 0.5, margin = margin(b = 10)))
+
+
+Answer <- "After analyzing the data, we found that there are four categories of merchants with percentages of fraudulent transactions that are above the average. However, upon closer inspection, three of these categories stand out even more. The category Shopping_Net has an exact value of three times the average percentage of fraudulent transactions, while Grocery_POS and Misc_Net are both more than two times the average. These three categories in particular warrant further investigation as they exhibit significantly higher rates of fraudulent transactions compared to the average"
+cat(Answer)
 
 ```
 
@@ -211,6 +543,88 @@ mutate(
 ```
 
 ```{r}
+library(dplyr)
+library(lubridate)
+
+# Create new variables for analysis
+data <- card_fraud %>%
+  mutate(
+    day_of_year = yday(trans_date_trans_time),
+    month_name = month(trans_date_trans_time, label = TRUE),
+    hour = hour(trans_date_trans_time),
+    weekday = wday(trans_date_trans_time, label = TRUE)
+  )
+
+# Analyze fraud prevalence by days
+fraud_by_day <- data %>%
+  group_by(day_of_year) %>%
+  summarise(fraud_count = sum(is_fraud == 1),
+            total_count = n()) %>%
+  mutate(fraud_percentage = (fraud_count / total_count) * 100) %>%
+  arrange(desc(fraud_percentage))
+
+# Analyze fraud prevalence by months
+fraud_by_month <- data %>%
+  group_by(month_name) %>%
+  summarise(fraud_count = sum(is_fraud == 1),
+            total_count = n()) %>%
+  mutate(fraud_percentage = (fraud_count / total_count) * 100) %>%
+  arrange(desc(fraud_percentage))
+
+# Analyze fraud prevalence by hours
+fraud_by_hour <- data %>%
+  group_by(hour) %>%
+  summarise(fraud_count = sum(is_fraud == 1),
+            total_count = n()) %>%
+  mutate(fraud_percentage = (fraud_count / total_count) * 100) %>%
+  arrange(desc(fraud_percentage))
+
+# Print the results
+cat("Fraud prevalence by days (ordered by descending fraud percentage):\n")
+print(fraud_by_day)
+
+cat("\nFraud prevalence by months (ordered by descending fraud percentage):\n")
+print(fraud_by_month)
+
+cat("\nFraud prevalence by hours (ordered by descending fraud percentage):\n")
+print(fraud_by_hour)
+
+# Filter data for months of January and February
+fraud_jan_feb <- data %>%
+  filter(month_name %in% c("Jan", "Feb"))
+
+
+# Convert hour to numeric
+fraud_by_hour$hour <- as.numeric(fraud_by_hour$hour)
+
+# Create plot for fraud prevalence by hour
+plot_hour <- ggplot(fraud_by_hour, aes(x = hour, y = fraud_percentage)) +
+  geom_line(color = "steelblue") +
+  geom_point(aes(color = ifelse(hour >= 22 | hour <= 3, "Nighttime", "Daytime")),
+             size = 3) +
+  scale_color_manual(values = c("Daytime" = "steelblue", "Nighttime" = "red")) +
+  labs(x = "Hour", y = "Fraud Percentage") +
+  ggtitle("Increase in Fraud during Nighttime Hours") +
+  theme_minimal() +
+  labs(subtitle = "Fraud Prevalence by Hour") +
+  theme(legend.position = "none")
+
+# Create plot for fraud prevalence by month
+plot_month <- ggplot(fraud_by_month, aes(x = month_name, y = fraud_percentage, fill = month_name)) +
+  geom_bar(stat = "identity", color = "black") +
+  labs(x = "Month", y = "Fraud Percentage") +
+  ggtitle("Increase in Fraud during January and February") +
+  theme_minimal() +
+  scale_fill_manual(values = ifelse(fraud_by_month$month_name %in% c("Jan", "Feb"), "red", "steelblue")) +
+  labs(subtitle = "Fraud Prevalence by Month") +
+  theme(legend.position = "none")
+
+# Display the plots
+plot_month
+plot_hour
+
+
+
 
 ```
 
@@ -221,7 +635,7 @@ mutate(
 # code adapted from https://www.geeksforgeeks.org/program-distance-two-points-earth/amp/
 
 
-fraud <- fraud %>%
+fraud <- card_fraud %>%
   mutate(
     
     # convert latitude/longitude to radians
@@ -237,6 +651,30 @@ fraud <- fraud %>%
     distance_km = 6377.830272 * acos((sin(lat1_radians) * sin(lat2_radians)) + cos(lat1_radians) * cos(lat2_radians) * cos(long2_radians - long1_radians))
 
   )
+
+# Convert is_fraud to factor
+fraud$is_fraud <- factor(fraud$is_fraud, labels = c("NO", "YES"))
+
+# Boxplot
+ggplot(fraud, aes(x = is_fraud, y = distance_miles, fill = is_fraud)) +
+  geom_boxplot(color = "black") +
+  scale_fill_manual(values = c("steelblue", "red")) +
+  labs(x = "Fraud", y = "Distance (miles)") +
+  ggtitle("Distance does not explain fraud significantly") +
+  labs(subtitle = "Relationship between Distance and Fraud") +
+  theme(legend.position = "none")
+
+# Violin plot
+ggplot(fraud, aes(x = factor(is_fraud), y = distance_miles, fill = factor(is_fraud))) +
+  geom_violin(color = "black") +
+  scale_fill_manual(values = c("steelblue", "red"), labels = c("Non-Fraud", "Fraud")) +
+  labs(x = "Fraud", y = "Distance (miles)") +
+  ggtitle("Distance does not explain fraud significantly") +
+  labs(subtitle = "Relationship between Distance and Fraud") +
+  theme(legend.position = "none")
+
+Answer <- "Based on the boxplot and violin plot, there doesn't seem to be a clear relationship between distance and fraud. The distribution of distances for both fraudulent and non-fraudulent transactions appears to be similar, with no significant difference in the median or spread. Therefore, it can be concluded that distance alone may not be a useful feature in explaining fraud in this dataset."
+cat(Answer)
 
 ```
 
