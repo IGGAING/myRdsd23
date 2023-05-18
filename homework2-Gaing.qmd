@@ -700,6 +700,9 @@ We will get energy data from the Our World in Data website, and CO2 and GDP per 
 #| message: false
 #| warning: false
 
+install.packages("cowplot")
+library(cowplot)
+
 # Download electricity data
 url <- "https://nyc3.digitaloceanspaces.com/owid-public/data/energy/owid-energy-data.csv"
 
@@ -748,6 +751,66 @@ gdp_percap <- wb_data(country = "countries_only",
   select(-c(unit, obs_status, footnote, last_updated)) %>% 
   rename(year = date,
          GDPpercap = value)
+
+energy_tidy <- energy %>%
+  pivot_longer(cols = c(biofuel, coal, gas, hydro, nuclear, oil, other_renewable, solar, wind),
+               names_to = c(".value", "source"),
+               names_sep = "_",
+               values_drop_na = TRUE) %>%
+  select(-iso_code)
+
+# Join the data frames
+merged_data <- left_join(energy_tidy, co2_percap, by = c("country", "year")) %>%
+  left_join(., gdp_percap, by = c("country", "year"))
+
+# Filter data for Argentina
+argentina_data <- merged_data %>% filter(country == "Argentina")
+
+# Rename the duplicate column names
+names(argentina_data)[9] <- "renewable_2"
+names(argentina_data)[21] <- "wind_2"
+
+# Create stacked area chart for electricity generation
+electricity_generation_chart <- argentina_data %>%
+  pivot_longer(cols = c(biofuel, coal, gas, hydro, nuclear, oil, solar, wind),
+               names_to = "source",
+               values_to = "generation",
+               names_repair = "unique") %>%
+  ggplot(aes(x = year, y = generation, fill = source)) +
+  geom_area(colour = "grey90", alpha = 0.5, position = "fill") +
+  labs(title = "Electricity Generation in Argentina",
+       x = "Year", y = "Generation") +
+  theme_minimal()
+
+# Create line chart for CO2 emissions per capita
+co2_per_capita_chart <- argentina_data %>%
+  ggplot(aes(x = year, y = co2percap)) +
+  geom_line() +
+  labs(title = "CO2 Emissions per Capita in Argentina",
+       x = "Year", y = "CO2 Emissions per Capita") +
+  theme_minimal()
+
+# Create line chart for GDP per capita
+gdp_per_capita_chart <- argentina_data %>%
+  ggplot(aes(x = year, y = GDPpercap)) +
+  geom_line() +
+  labs(title = "GDP per Capita in Argentina",
+       x = "Year", y = "GDP per Capita") +
+  theme_minimal()
+
+# Arrange the charts side by side
+combined_charts <- plot_grid(electricity_generation_chart, co2_per_capita_chart, gdp_per_capita_chart, ncol = 1)
+
+# Display the combined charts
+combined_charts
+
+
+
+
+
+
+
+
 ```
 
 Specific questions:
