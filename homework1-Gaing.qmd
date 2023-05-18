@@ -211,6 +211,7 @@ library(nycflights13)
 filtered_weather <- weather %>%
   select(dewp, 
          humid)
+  na.omit()
 
 # Create scatter plot
 ggplot(filtered_weather, aes(x = dewp, 
@@ -220,7 +221,11 @@ ggplot(filtered_weather, aes(x = dewp,
        y = "Humidity") +
   ggtitle("Relationship between Dew Point Temperature and Humidity")
 
-# Result explanation: In the scatter plot, each point represents a specific observation. As we examine the plot, we can see that there is a general pattern. When the dew point temperature is low, the corresponding humidity tends to be relatively low as well. Similarly, when the dew point temperature is high, the humidity tends to be higher.
+#Correlation
+filtered_weather %>% 
+  summarise(corr_dh=cor(dewp,humid, use="complete.obs"))
+
+# Result explanation: In the scatter plot, each point represents a specific observation. As we examine the plot, we can see that there is a general pattern. When the dew point temperature is low, the corresponding humidity tends to be relatively low as well. Similarly, when the dew point temperature is high, the humidity tends to be higher. The correlation is 0.51
 
 
 #| label: problem-4C
@@ -232,7 +237,8 @@ library(nycflights13)
 
 # Filter weather data
 filtered_weather <- weather %>%
-  select(precip, visib)
+  select(precip, visib) %>%
+  na.omit()
 
 # Create scatter plot
 ggplot(filtered_weather, aes(x = precip, 
@@ -242,7 +248,12 @@ ggplot(filtered_weather, aes(x = precip,
        y = "Visibility") +
   ggtitle("Relationship between Precipitation and Visibility")
 
-# Result explanation: In the scatter plot, we can observe several points where the visibility (visib) is 0 even when the precipitation (precip) values are lower than 0.25.This phenomenon suggests that there might be other factors impacting visibility besides precipitation alone. For example, fog, mist, or other atmospheric conditions can significantly reduce visibility even with relatively low levels of precipitation.
+#Correlation
+filtered_weather %>% 
+  summarise(corr_dh=cor(precip,visib))
+
+
+# Result explanation: In the scatter plot, we can observe several points where the visibility (visib) is 0 even when the precipitation (precip) values are lower than 0.25.This phenomenon suggests that there might be other factors impacting visibility besides precipitation alone. For example, fog, mist, or other atmospheric conditions can significantly reduce visibility even with relatively low levels of precipitation. The correlation is -0.32. 
 
 ```
 
@@ -290,7 +301,7 @@ planes_per_manufacturer <- planes %>%
 # View the result
 print(planes_per_manufacturer)
 
-# Result explanation: Clearly BOING is the main manufacturer followed by AIRBUS
+# Result explanation: Clearly BOEING is the main manufacturer followed by AIRBUS
 
 
 #| label: problem-5C
@@ -362,8 +373,11 @@ oldest_plane <- flights_with_planes %>%
   select(tailnum, year_plane) %>%
   slice(1)
 
-# Display the result
+# Result of the plane and its year
 oldest_plane
+
+# Display the result
+cat("The oldest plane (specified by tailnum) that flew from New York City airports in 2013 is:", oldest_plane$tailnum)
 
 #| label: problem-6B
 
@@ -571,7 +585,7 @@ The age gaps dataset includes "gender" columns, which always contain the values 
 The following is a data dictionary of the variables used
 
 | variable            | class     | description                                                                                             |
-|:-----------|:-----------|:-----------------------------------------------|
+|:----------------|:----------------|:-------------------------------------|
 | movie_name          | character | Name of the film                                                                                        |
 | release_year        | integer   | Release year                                                                                            |
 | director            | character | Director of the film                                                                                    |
@@ -590,18 +604,24 @@ The following is a data dictionary of the variables used
 
 #| label: problem-10A
  
+library(ggplot2)
+library(magrittr)
+library(dplyr)
+
 age_gap <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-02-14/age_gaps.csv')
 
 # Create a dataframe with age_difference column
-age_gap_df <- data.frame(age_difference = age_gap_data)
+age_gap_df <- data.frame(age_difference = age_gap$age_difference)
 
-# Remove any missing values in the age_difference column
-age_gap_df <- age_gap_df %>% filter(!is.na(age_difference))
+# Print the structure of age_gap_df
+str(age_gap_df)
 
-age_gap_data
+# Filter out missing values
+age_gap_filtered <- age_gap_df %>%
+  filter(!is.na(age_difference))
 
-# Plot the distribution of age differences
-ggplot(data = age_gap_df, aes(x = age_difference)) +
+# Plotting the histogram
+ggplot(data = age_gap_filtered, aes(x = age_difference)) +
   geom_histogram(binwidth = 5, fill = "skyblue", color = "black") +
   labs(x = "Age Difference", y = "Frequency") +
   ggtitle("Distribution of Age Differences in Movies")
@@ -649,17 +669,42 @@ cat("The movie with the greatest number of love interests is:", greatest_love_in
 
 #| label: problem-10D
 
+#For Actor
 # Count the number of love interests per actor/actress
 actor_love_interests <- age_gap %>%
   group_by(actor_1_name) %>%
   summarise(num_love_interests = n_distinct(couple_number)) %>%
   arrange(desc(num_love_interests))
 
-# Get the actor/actress with the greatest number of love interests
-greatest_love_interests_actor <- actor_love_interests$actor_1_name[1]
+# Get the maximum number of love interests
+max_love_interests <- max(actor_love_interests$num_love_interests)
+
+# Get the actor/actress(es) with the greatest number of love interests
+greatest_love_interests_actors <- actor_love_interests %>%
+  filter(num_love_interests == max_love_interests) %>%
+  pull(actor_1_name)
 
 # Print the result
-cat("The actor/actress with the greatest number of love interests is:", greatest_love_interests_actor, "\n")
+cat("The actor(es) with the greatest number of love interests is/are:", paste(greatest_love_interests_actors, collapse = ", "), "\n")
+
+#For actress
+# Count the number of love interests per actor/actress
+actor_love_interests <- age_gap %>%
+  group_by(actor_2_name) %>%
+  summarise(num_love_interests = n_distinct(couple_number)) %>%
+  arrange(desc(num_love_interests))
+
+# Get the maximum number of love interests
+max_love_interests <- max(actor_love_interests$num_love_interests)
+
+# Get the actor/actress(es) with the greatest number of love interests
+greatest_love_interests_actors <- actor_love_interests %>%
+  filter(num_love_interests == max_love_interests) %>%
+  pull(actor_2_name)
+
+# Print the result
+cat("The actress(es) with the greatest number of love interests is/are:", paste(greatest_love_interests_actors, collapse = ", "), "\n")
+
 
 #| label: problem-10E
 
@@ -730,9 +775,9 @@ There is a lot of explanatory text, comments, etc. You do not need these, so del
 
 # Details
 
--   Who did you collaborate with: TYPE NAMES HERE
--   Approximately how much time did you spend on this problem set: ANSWER HERE
--   What, if anything, gave you the most trouble: ANSWER HERE
+-   Who did you collaborate with: Guido Bozzano 
+-   Approximately how much time did you spend on this problem set: 12 or more 
+-   What, if anything, gave you the most trouble: Che charts 
 
 **Please seek out help when you need it,** and remember the [15-minute rule](https://mam2022.netlify.app/syllabus/#the-15-minute-rule){target="_blank"}. You know enough R (and have enough examples of code from class and your readings) to be able to do this. If you get stuck, ask for help from others, post a question on Slack-- and remember that I am here to help too!
 
