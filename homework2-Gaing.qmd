@@ -700,7 +700,7 @@ We will get energy data from the Our World in Data website, and CO2 and GDP per 
 #| message: false
 #| warning: false
 
-install.packages("cowplot")
+#install.packages("cowplot")
 library(cowplot)
 
 # Download electricity data
@@ -752,6 +752,7 @@ gdp_percap <- wb_data(country = "countries_only",
   rename(year = date,
          GDPpercap = value)
 
+# Make the table tidy
 energy_tidy <- energy %>%
   pivot_longer(cols = c(biofuel, coal, gas, hydro, nuclear, oil, other_renewable, solar, wind),
                names_to = c(".value", "source"),
@@ -770,6 +771,16 @@ argentina_data <- merged_data %>% filter(country == "Argentina")
 names(argentina_data)[9] <- "renewable_2"
 names(argentina_data)[21] <- "wind_2"
 
+# Define a custom color palette for electricity generation
+generation_colors <- c(biofuel = "#FFD700",
+                       coal = "#000000",
+                       gas = "#FFA500",
+                       hydro = "#1E90FF",
+                       nuclear = "#008000",
+                       oil = "#808080",
+                       solar = "#FFFF00",
+                       wind = "#FF4500")
+
 # Create stacked area chart for electricity generation
 electricity_generation_chart <- argentina_data %>%
   pivot_longer(cols = c(biofuel, coal, gas, hydro, nuclear, oil, solar, wind),
@@ -778,38 +789,55 @@ electricity_generation_chart <- argentina_data %>%
                names_repair = "unique") %>%
   ggplot(aes(x = year, y = generation, fill = source)) +
   geom_area(colour = "grey90", alpha = 0.5, position = "fill") +
-  labs(title = "Electricity Generation in Argentina",
+  scale_fill_manual(values = generation_colors) +
+  labs(title = "Argentina going against the global trend by decreasing renewable energy share",
        x = "Year", y = "Generation") +
+  labs(subtitle = "Electricity Generation in Argentina") +
   theme_minimal()
 
-# Create line chart for CO2 emissions per capita
-co2_per_capita_chart <- argentina_data %>%
-  ggplot(aes(x = year, y = co2percap)) +
-  geom_line() +
-  labs(title = "CO2 Emissions per Capita in Argentina",
-       x = "Year", y = "CO2 Emissions per Capita") +
-  theme_minimal()
+# Display the electricity generation chart
+electricity_generation_chart
 
-# Create line chart for GDP per capita
-gdp_per_capita_chart <- argentina_data %>%
-  ggplot(aes(x = year, y = GDPpercap)) +
-  geom_line() +
-  labs(title = "GDP per Capita in Argentina",
-       x = "Year", y = "GDP per Capita") +
-  theme_minimal()
+# Get the first and last years
+first_year <- min(argentina_data$year)
+last_year <- max(argentina_data$year)
+second_last_year <- max(argentina_data$year) - 2 
 
-# Arrange the charts side by side
-combined_charts <- plot_grid(electricity_generation_chart, co2_per_capita_chart, gdp_per_capita_chart, ncol = 1)
+# Create scatter plot of CO2 per capita vs GDP per capita for Argentina with trend line and annotations
+co2_gdp_scatter <- ggplot(argentina_data, aes(x = GDPpercap, y = co2percap)) +
+  geom_point(aes(color = year), size = 3) +
+  geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +  # Add trend line
+  geom_text(data = argentina_data %>% filter(year %in% c(first_year, second_last_year, last_year)),
+            aes(label = as.character(year)), vjust = -1, size = 3.5) +  # Add annotations for selected years
+  labs(title = "GDP grows, but with an increase in CO2 emissions",
+       x = "GDP per Capita",
+       y = "CO2 Emissions per Capita",
+       color = "Year") +
+  labs(subtitle = "CO2 Emissions per Capita vs GDP per Capita in Argentina") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0.05, 0)) +  # Increase x-axis expansion
+  scale_y_continuous(expand = c(0.05, 0), limits = c(2, 5))  # Set limits of y-axis
 
-# Display the combined charts
-combined_charts
+# Display the scatter plot
+co2_gdp_scatter
 
+# Create scatter plot of CO2 per capita vs Electricity used per capita per day for Argentina
+co2_electricity_scatter <- ggplot(argentina_data, aes(x = per_capita_electricity, y = co2percap)) +
+  geom_point(aes(color = year), size = 3) +
+  geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +  # Add trend line
+  geom_text(data = argentina_data %>% filter(year %in% c(first_year, second_last_year, last_year)),
+            aes(label = as.character(year)), vjust = -1, size = 3.5) +  # Add annotations for selected years
+  labs(title = "Argentina: Rising CO2 emissions match energy consumption",
+       x = "Electricity Used (kWh) per Capita per Day",
+       y = "CO2 Emissions per Capita",
+       color = "Year") +
+  labs(subtitle = "CO2 Emissions per Capita vs Electricity Used per Capita per Day in Argentina") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0.05, 0)) +  # Increase x-axis expansion
+  scale_y_continuous(expand = c(0.05, 0), limits = c(2, 5))  # Set limits of y-axis
 
-
-
-
-
-
+# Display the scatter plot
+co2_electricity_scatter
 
 ```
 
@@ -830,9 +858,9 @@ There is a lot of explanatory text, comments, etc. You do not need these, so del
 
 # Details
 
--   Who did you collaborate with: TYPE NAMES HERE
--   Approximately how much time did you spend on this problem set: ANSWER HERE
--   What, if anything, gave you the most trouble: ANSWER HERE
+-   Who did you collaborate with: -
+-   Approximately how much time did you spend on this problem set: 15 HOURS
+-   What, if anything, gave you the most trouble: THE LAST ONE
 
 **Please seek out help when you need it,** and remember the [15-minute rule](https://mam2022.netlify.app/syllabus/#the-15-minute-rule){target="_blank"}. You know enough R (and have enough examples of code from class and your readings) to be able to do this. If you get stuck, ask for help from others, post a question on Slack-- and remember that I am here to help too!
 
