@@ -584,7 +584,7 @@ The age gaps dataset includes "gender" columns, which always contain the values 
 The following is a data dictionary of the variables used
 
 | variable            | class     | description                                                                                             |
-|:----------------|:----------------|:-------------------------------------|
+|:--------------------|:----------|:--------------------------------------------------------------------------------------------------------|
 | movie_name          | character | Name of the film                                                                                        |
 | release_year        | integer   | Release year                                                                                            |
 | director            | character | Director of the film                                                                                    |
@@ -774,9 +774,9 @@ There is a lot of explanatory text, comments, etc. You do not need these, so del
 
 # Details
 
--   Who did you collaborate with: Guido Bozzano 
--   Approximately how much time did you spend on this problem set: 12 or more 
--   What, if anything, gave you the most trouble: Che charts 
+-   Who did you collaborate with: Guido Bozzano
+-   Approximately how much time did you spend on this problem set: 12 or more
+-   What, if anything, gave you the most trouble: Che charts
 
 **Please seek out help when you need it,** and remember the [15-minute rule](https://mam2022.netlify.app/syllabus/#the-15-minute-rule){target="_blank"}. You know enough R (and have enough examples of code from class and your readings) to be able to do this. If you get stuck, ask for help from others, post a question on Slack-- and remember that I am here to help too!
 
